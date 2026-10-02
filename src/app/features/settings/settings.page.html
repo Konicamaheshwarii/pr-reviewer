@@ -1,0 +1,75 @@
+<h1>Settings</h1>
+
+<section class="card stack">
+  <h2>Reviewer</h2>
+  <div class="providers" role="radiogroup" aria-label="Reviewer">
+    @for (p of providers; track p.id) {
+      <button type="button" role="radio" class="provider" [class.on]="store.provider() === p.id"
+              [attr.aria-checked]="store.provider() === p.id" (click)="choose(p.id)">
+        <strong>{{ p.label }}</strong>
+        <span class="muted">
+          @switch (p.id) {
+            @case ('demo') { The built-in static rules. Works offline, nothing leaves your browser. }
+            @case ('gemini') { Free tier. Strong at reasoning about larger changes. }
+            @case ('groq') { Free tier. Very fast open models. }
+          }
+        </span>
+      </button>
+    }
+  </div>
+
+  @if (real(); as id) {
+    <label>
+      API key
+      <input type="password" autocomplete="off" spellcheck="false" [value]="store.settings().apiKeys[id] ?? ''"
+             (change)="setKey($any($event.target).value)" placeholder="Paste your key" />
+    </label>
+    <p class="muted small">
+      Get a free key at <a [href]="current().keyUrl" target="_blank" rel="noopener">{{ current().keyUrl }}</a>.
+      It is stored in this browser only and sent straight to {{ current().label }}. There is no backend.
+      Each file of the diff is sent as one request.
+    </p>
+    <label>
+      Model
+      <input type="text" [value]="store.settings().models[id]" (change)="setModel($any($event.target).value)" />
+    </label>
+    <label class="check">
+      <input type="checkbox" [checked]="store.settings().combineRules" (change)="store.update({ combineRules: $any($event.target).checked })" />
+      Also run the built-in static rules
+    </label>
+    <div class="row">
+      <button class="btn" type="button" (click)="testConnection()" [disabled]="store.needsKey() || test().state === 'running'">
+        @if (test().state === 'running') { <span class="spinner" aria-hidden="true"></span> } Test connection
+      </button>
+      <button class="btn danger" type="button" (click)="clearKey()" [disabled]="store.needsKey()">Remove key</button>
+      @if (test().message) {
+        <span [class]="test().state === 'ok' ? 'ok' : 'fail'" role="status">{{ test().message }}</span>
+      }
+    </div>
+  }
+</section>
+
+<section class="card stack">
+  <h2>GitHub</h2>
+  <label>
+    Personal access token <span class="muted">(optional)</span>
+    <input type="password" autocomplete="off" spellcheck="false" [value]="store.settings().githubToken"
+           (change)="store.update({ githubToken: $any($event.target).value.trim() })" placeholder="github_pat_…" />
+  </label>
+  <p class="muted small">
+    Only used to fetch pull request diffs from api.github.com, which raises the limit from 60 to 5,000 requests an hour.
+    A fine-grained token with no extra permissions is enough for public repositories. Stored in this browser only.
+  </p>
+</section>
+
+<section class="card stack">
+  <h2>Appearance</h2>
+  <div class="row" role="radiogroup" aria-label="Theme">
+    @for (t of themes; track t) {
+      <button type="button" role="radio" class="btn" [class.primary]="store.settings().theme === t"
+              [attr.aria-checked]="store.settings().theme === t" (click)="store.update({ theme: t })">
+        {{ t === 'system' ? 'Match system' : t === 'light' ? 'Light' : 'Dark' }}
+      </button>
+    }
+  </div>
+</section>

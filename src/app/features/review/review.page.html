@@ -1,0 +1,127 @@
+@if (review(); as r) {
+  <header class="head">
+    <div class="title">
+      <h1>{{ r.title }}</h1>
+      <p class="muted small meta">
+        @switch (r.source.kind) {
+          @case ('github') { <a [href]="$any(r.source).url" target="_blank" rel="noopener">{{ $any(r.source).owner }}/{{ $any(r.source).repo }}#{{ $any(r.source).number }}</a> · }
+          @case ('compare') { Snippet comparison · }
+          @default { Pasted diff · }
+        }
+        {{ files().length }} file{{ files().length === 1 ? '' : 's' }} ·
+        <span class="adds">+{{ totals().additions }}</span> <span class="dels">−{{ totals().deletions }}</span> ·
+        {{ r.reviewer }} · {{ r.createdAt.slice(0, 16).replace('T', ' ') }}
+      </p>
+    </div>
+    <div class="row actions">
+      @if (r.status === 'running') {
+        <button class="btn" type="button" (click)="cancel()">Cancel</button>
+      } @else {
+        @if (progress().failed) { <button class="btn" type="button" (click)="rerun(true)">Retry {{ progress().failed }} failed</button> }
+        <button class="btn" type="button" (click)="rerun()" title="Run the review again with the current reviewer">Re-run</button>
+      }
+      <button class="btn" type="button" (click)="copyMarkdown()" [disabled]="r.status === 'running'">
+        {{ copied() ? 'Copied' : 'Copy Markdown' }}
+      </button>
+      <button class="btn" type="button" (click)="downloadMarkdown()" [disabled]="r.status === 'running'">Download .md</button>
+      <button class="btn danger" type="button" (click)="remove()">Delete</button>
+    </div>
+  </header>
+
+  @if (r.status === 'running') {
+    <div class="progress" role="status" aria-live="polite">
+      <span class="spinner" aria-hidden="true"></span>
+      Reviewing {{ progress().done }} of {{ progress().total }} file{{ progress().total === 1 ? '' : 's' }}…
+      <progress [value]="progress().done" [max]="progress().total || 1" aria-label="Review progress"></progress>
+    </div>
+  } @else if (r.status === 'cancelled' || r.status === 'interrupted') {
+    <p class="alert info">This review was {{ r.status }} before it finished. Use Retry or Re-run to complete it.</p>
+  }
+
+  <div class="layout">
+    <aside class="side stack">
+      <section class="card stack summary" aria-labelledby="sum-h">
+        <h2 id="sum-h">Summary</h2>
+        @if (verdict(); as v) { <p class="verdict {{ v.tone }}">{{ v.text }}</p> }
+        <div class="tiles" role="group" aria-label="Filter by severity">
+          @for (s of severities; track s) {
+            <button type="button" class="tile {{ s }}" [attr.aria-pressed]="severityOn()[s]" (click)="toggleSeverity(s)">
+              <span class="count">{{ counts()[s] }}</span>
+              <span class="lbl">{{ severityLabel[s] }}</span>
+            </button>
+          }
+        </div>
+        <div class="cats">
+          @for (c of categories; track c) {
+            @if (categoryCounts()[c]) { <span class="cat-pill">{{ c }} <strong>{{ categoryCounts()[c] }}</strong></span> }
+          }
+        </div>
+      </section>
+
+      <section class="card stack filters" aria-labelledby="flt-h">
+        <h2 id="flt-h">Filters</h2>
+        <label>
+          Category
+          <select [value]="category()" (change)="category.set($any($event.target).value)">
+            <option value="all">All categories</option>
+            @for (c of categories; track c) { <option [value]="c">{{ c }} ({{ categoryCounts()[c] }})</option> }
+          </select>
+        </label>
+        @if (hasAi()) {
+          <label>
+            Source
+            <select [value]="source()" (change)="source.set($any($event.target).value)">
+              <option value="all">AI and rules</option>
+              <option value="ai">AI only</option>
+              <option value="rule">Rules only</option>
+            </select>
+          </label>
+        }
+        <label class="check"><input type="checkbox" [checked]="onlyCommented()" (change)="onlyCommented.set($any($event.target).checked)" /> Only files with comments</label>
+        <label class="check"><input type="checkbox" [checked]="showDismissed()" (change)="showDismissed.set($any($event.target).checked)" /> Show dismissed ({{ dismissedCount() }})</label>
+      </section>
+
+      <nav class="card toc" aria-labelledby="toc-h">
+        <h2 id="toc-h">Files</h2>
+        <ul>
+          @for (f of files(); track f.id) {
+            <li>
+              <button type="button" (click)="jumpTo(f.id)" [title]="f.path">
+                <span class="dot {{ r.files[f.id]?.state }}" aria-hidden="true"></span>
+                <span class="fname">{{ f.path }}</span>
+                @if (byFile().get(f.path)?.length; as n) { <span class="chip">{{ n }}</span> }
+              </button>
+            </li>
+          }
+        </ul>
+      </nav>
+    </aside>
+
+    <section class="files stack" aria-label="Diff">
+      <div class="row toolbar">
+        <div class="seg" role="group" aria-label="Diff layout">
+          <button type="button" [attr.aria-pressed]="view() === 'unified'" (click)="setView('unified')">Unified</button>
+          <button type="button" [attr.aria-pressed]="view() === 'split'" (click)="setView('split')" [disabled]="isNarrow()"
+                  [title]="isNarrow() ? 'Split view needs a wider screen' : 'Side by side'">Split</button>
+        </div>
+        <span class="spacer"></span>
+        <button class="btn sm" type="button" (click)="setAll(false)">Expand all</button>
+        <button class="btn sm" type="button" (click)="setAll(true)">Collapse all</button>
+      </div>
+
+      @for (f of visibleFiles(); track f.id) {
+        <app-diff-file [id]="'file-' + anchor(f.id)" [file]="f" [comments]="byFile().get(f.path) ?? []" [view]="view()"
+                       [state]="r.files[f.id]" [collapsed]="collapsed()[f.id]" (collapsedChange)="setCollapsed(f.id, $event)"
+                       (dismiss)="dismiss($event)" />
+      } @empty {
+        <p class="card muted">No files match the filters.</p>
+      }
+    </section>
+  </div>
+} @else {
+  <section class="card stack missing">
+    <h1>Review not found</h1>
+    <p class="muted">It may have been deleted, or it was saved in another browser.</p>
+    <p><a class="btn primary" routerLink="/">Start a new review</a></p>
+  </section>
+}

@@ -1,0 +1,70 @@
+.skip {
+  position: absolute;
+  left: 8px;
+  top: -40px;
+  background: var(--accent);
+  color: var(--accent-text);
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  z-index: 10;
+  &:focus { top: 8px; }
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+  padding: 0.85rem 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 800;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 1.05rem;
+}
+
+.logo {
+  width: 26px;
+  height: 26px;
+  rect { fill: var(--accent); }
+  path { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+  circle { fill: #7ee2a8; }
+}
+
+nav {
+  display: flex;
+  gap: 0.15rem;
+  flex: 1;
+  flex-wrap: wrap;
+  a {
+    color: var(--muted);
+    text-decoration: none;
+    padding: 0.35rem 0.65rem;
+    border-radius: 8px;
+    font-weight: 600;
+    &.active, &:hover { color: var(--text); background: var(--surface-2); }
+    &:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  }
+}
+
+.provider { text-decoration: none; }
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.25rem 16px 3rem;
+  outline: none;
+}
+
+@media (max-width: 520px) {
+  .top { gap: 0.4rem 0.75rem; }
+  nav { order: 3; flex-basis: 100%; }
+  .provider { margin-left: auto; }
+}

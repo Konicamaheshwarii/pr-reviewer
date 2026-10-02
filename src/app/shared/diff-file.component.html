@@ -1,0 +1,93 @@
+@let f = file();
+<section class="file" [class.open]="!collapsed()">
+  <header class="head">
+    <button type="button" class="toggle" (click)="toggle()" [attr.aria-expanded]="!collapsed()" [attr.aria-controls]="bodyId()">
+      <span class="chev" aria-hidden="true">{{ collapsed() ? '▸' : '▾' }}</span>
+      <span class="path">
+        @if (f.status === 'renamed' || f.status === 'copied') {
+          <span class="old">{{ f.oldPath }}</span> <span aria-label="renamed to">→</span>
+        }
+        {{ f.path }}
+      </span>
+    </button>
+    <span class="meta">
+      <span class="status {{ f.status }}">{{ f.status }}@if (f.similarity !== undefined) { {{ f.similarity }}%}</span>
+      @if (!f.binary) {
+        <span class="adds" [attr.aria-label]="f.additions + ' additions'">+{{ f.additions }}</span>
+        <span class="dels" [attr.aria-label]="f.deletions + ' deletions'">−{{ f.deletions }}</span>
+      }
+      @switch (state()?.state) {
+        @case ('running') { <span class="st"><span class="spinner" aria-hidden="true"></span> Reviewing</span> }
+        @case ('pending') { <span class="st muted">Queued</span> }
+        @case ('error') { <span class="st err" [title]="state()?.message ?? ''">Failed</span> }
+        @case ('skipped') { <span class="st muted">Skipped</span> }
+        @case ('done') {
+          @if (openCount()) { <span class="chip">{{ openCount() }} comment{{ openCount() === 1 ? '' : 's' }}</span> }
+          @else { <span class="st ok">No comments</span> }
+        }
+      }
+    </span>
+  </header>
+
+  @if (!collapsed()) {
+    <div class="body" [id]="bodyId()">
+      @if (state()?.summary) { <p class="summary">{{ state()?.summary }}</p> }
+      @if (state()?.state === 'error') { <p class="alert note">Review failed: {{ state()?.message }}</p> }
+      @if (state()?.state === 'skipped' && state()?.message) { <p class="note muted">Not reviewed: {{ state()?.message }}.</p> }
+      @if (state()?.dropped) {
+        <p class="note muted">{{ state()?.dropped }} AI comment(s) were discarded because they pointed at lines that are not in the diff.</p>
+      }
+
+      @if (f.binary) {
+        <p class="note muted">Binary file not shown.</p>
+      } @else if (!f.hunks.length) {
+        <p class="note muted">
+          @if (f.oldMode && f.newMode && f.oldMode !== f.newMode) { File mode changed from {{ f.oldMode }} to {{ f.newMode }}. }
+          @else if (f.status === 'renamed') { Renamed without content changes. }
+          @else { No content changes. }
+        </p>
+      } @else if (view() === 'unified') {
+        <table class="diff unified" [attr.aria-label]="'Changes in ' + f.path">
+          <colgroup><col class="n" /><col class="n" /><col /></colgroup>
+          <tbody>
+            @for (row of unifiedRows(); track row.key) {
+              @if (row.kind === 'hunk') {
+                <tr class="hunk"><td colspan="3">{{ row.header }}</td></tr>
+              } @else {
+                <tr class="ln {{ row.line.type }}" [class.has-c]="row.comments.length">
+                  <td class="num">{{ row.line.oldLine ?? '' }}</td>
+                  <td class="num">{{ row.line.newLine ?? '' }}</td>
+                  <td class="code"><span class="sign" aria-hidden="true">{{ sign(row.line) }}</span>@for (t of row.tokens; track $index) {<span [class]="t.k ? 't-' + t.k : null">{{ t.v }}</span>}@if (row.line.noNewline) {<span class="eof" title="No newline at end of file" aria-label="No newline at end of file">⊘</span>}</td>
+                </tr>
+                @if (row.comments.length) {
+                  <tr class="crow"><td colspan="3"><app-comment-thread [comments]="row.comments" [file]="f" (dismiss)="dismiss.emit($event)" /></td></tr>
+                }
+              }
+            }
+          </tbody>
+        </table>
+      } @else {
+        <table class="diff split" [attr.aria-label]="'Changes in ' + f.path + ', side by side'">
+          <colgroup><col class="n" /><col /><col class="n" /><col /></colgroup>
+          <tbody>
+            @for (row of splitRows(); track row.key) {
+              @if (row.kind === 'hunk') {
+                <tr class="hunk"><td colspan="4">{{ row.header }}</td></tr>
+              } @else {
+                <tr class="ln" [class.has-c]="row.comments.length">
+                  <td class="num" [class]="row.left?.type ?? 'empty'">{{ row.left?.oldLine ?? '' }}</td>
+                  <td class="code" [class]="row.left?.type ?? 'empty'">@if (row.left) {<span class="sign" aria-hidden="true">{{ sign(row.left) }}</span>@for (t of row.leftTokens; track $index) {<span [class]="t.k ? 't-' + t.k : null">{{ t.v }}</span>}}</td>
+                  <td class="num" [class]="row.right?.type ?? 'empty'">{{ row.right?.newLine ?? '' }}</td>
+                  <td class="code" [class]="row.right?.type ?? 'empty'">@if (row.right) {<span class="sign" aria-hidden="true">{{ sign(row.right) }}</span>@for (t of row.rightTokens; track $index) {<span [class]="t.k ? 't-' + t.k : null">{{ t.v }}</span>}@if (row.right.noNewline) {<span class="eof" title="No newline at end of file" aria-label="No newline at end of file">⊘</span>}}</td>
+                </tr>
+                @if (row.comments.length) {
+                  <tr class="crow"><td colspan="4"><app-comment-thread [comments]="row.comments" [file]="f" (dismiss)="dismiss.emit($event)" /></td></tr>
+                }
+              }
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+</section>

@@ -1,0 +1,54 @@
+:host { display: block; min-width: 0; }
+
+.file { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+
+.head {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem 0.75rem;
+  padding: 0.5rem 0.75rem; background: var(--surface-2);
+}
+.open .head { border-bottom: 1px solid var(--border); }
+
+.toggle {
+  display: flex; align-items: center; gap: 0.4rem; min-width: 0; flex: 1 1 16rem;
+  font: inherit; color: inherit; background: none; border: 0; padding: 0.2rem; cursor: pointer; text-align: left; border-radius: 6px;
+  &:focus-visible { outline: 2px solid var(--accent); }
+}
+.chev { width: 1em; color: var(--muted); }
+.path { font: 600 0.88rem var(--mono); overflow-wrap: anywhere; }
+.old { color: var(--muted); font-weight: 400; }
+
+.meta { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; flex-wrap: wrap; }
+.status { text-transform: capitalize; color: var(--muted); }
+.adds { color: var(--add-mark); font-weight: 700; }
+.dels { color: var(--del-mark); font-weight: 700; }
+.st { display: inline-flex; align-items: center; gap: 0.3rem; &.err { color: var(--bad); font-weight: 600; } &.ok { color: var(--good); } }
+
+.summary, .note { margin: 0; padding: 0.55rem 0.9rem; font-size: 0.88rem; border-bottom: 1px solid var(--border); }
+.alert.note { border-radius: 0; border-width: 0 0 1px; }
+
+.diff {
+  width: 100%; border-collapse: collapse; table-layout: fixed;
+  font: 0.8rem/1.5 var(--mono);
+  col.n { width: 3.1em; }
+  td { padding: 0 0.5rem; vertical-align: top; }
+}
+.num {
+  color: var(--muted); text-align: right; user-select: none; font-size: 0.75rem; padding-top: 0.1em !important;
+}
+.code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.sign { user-select: none; color: var(--muted); display: inline-block; width: 1.1em; }
+
+.add { background: var(--add-bg); .sign { color: var(--add-mark); } }
+.del { background: var(--del-bg); .sign { color: var(--del-mark); } }
+.num.add { background: var(--add-num); }
+.num.del { background: var(--del-num); }
+.unified .add .num { background: var(--add-num); }
+.unified .del .num { background: var(--del-num); }
+.empty { background: var(--surface-2); }
+.split td.code + td.num { border-left: 1px solid var(--border); }
+.has-c .num { box-shadow: inset 3px 0 var(--accent); }
+
+.hunk td { background: var(--hunk-bg); color: var(--hunk-text); padding: 0.2rem 0.75rem; overflow-wrap: anywhere; }
+.eof { color: var(--del-mark); margin-left: 0.4em; }
+
+.crow > td { padding: 0.4rem 0.6rem; background: var(--bg); font: 0.88rem/1.5 system-ui, sans-serif; }
