@@ -1,6 +1,7 @@
 import { Injectable, effect, inject, signal } from '@angular/core';
 import { DiffFile } from '../diff/models';
 import { parseUnifiedDiff } from '../diff/parser';
+import { demoReview } from '../llm/demo.provider';
 import { LlmService } from '../llm/llm.service';
 import { SettingsStore } from '../settings.store';
 import { readJson, writeJson } from '../storage';
@@ -139,10 +140,11 @@ export class ReviewStore {
     const reviewFile = async (file: DiffFile) => {
       this.patchFile(id, file.id, { state: 'running' });
       try {
-        const comments: ReviewComment[] = useAi && combineRules ? runRules(file) : [];
-        const summaries: string[] = [];
+        const comments: ReviewComment[] = !useAi || combineRules ? runRules(file) : [];
+        const summaries: string[] = useAi ? [] : [demoReview({ file, hunks: file.hunks }).summary];
         let dropped = 0;
-        for (const hunks of batchHunks(file.hunks)) {
+        // In Demo mode the rule engine is the reviewer, so no provider call is needed.
+        for (const hunks of useAi ? batchHunks(file.hunks) : []) {
           const text = await this.llm.complete(reviewRequest(file, hunks), controller.signal);
           const parsed = parseReview(text, file, hunks);
           comments.push(...parsed.comments);

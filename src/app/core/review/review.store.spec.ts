@@ -66,6 +66,17 @@ describe('ReviewStore', () => {
     expect(store.get(id)!.comments.length).toBe(4);
   });
 
+  it('uses the rule engine as the reviewer in Demo mode, without calling a provider', async () => {
+    const id = store.create(SAMPLES[1].diff, '', { kind: 'paste' });
+    await waitFor(() => store.get(id)?.status === 'done');
+    const review = store.get(id)!;
+    expect(llm.complete).not.toHaveBeenCalled();
+    expect(review.reviewer).toBe('Demo rules');
+    expect(review.comments.length).toBeGreaterThan(5);
+    expect(review.comments.every((c) => c.source === 'rule' && !!c.ruleId)).toBeTrue();
+    expect(review.comments.some((c) => c.ruleId === 'no-eval')).toBeTrue();
+  });
+
   it('adds the static rules next to AI comments when enabled', async () => {
     TestBed.inject(SettingsStore).update({ provider: 'gemini', apiKeys: { gemini: 'k' }, combineRules: true });
     llm.complete.and.resolveTo('{"comments":[]}');
@@ -77,6 +88,7 @@ describe('ReviewStore', () => {
   });
 
   it('rejects text without a diff, and supports dismiss and delete', async () => {
+    TestBed.inject(SettingsStore).update({ provider: 'groq', apiKeys: { groq: 'k' }, combineRules: false });
     expect(() => store.create('just some text', '', { kind: 'paste' })).toThrowError(/No diff found/);
     llm.complete.and.resolveTo('{"comments":[{"line":1,"title":"Hi"}]}');
     const id = store.create('--- a/a.ts\n+++ b/a.ts\n@@ -1 +1 @@\n-a\n+b\n', 'Tiny', { kind: 'paste' });

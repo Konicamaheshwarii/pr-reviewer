@@ -52,7 +52,7 @@
 <section class="card stack">
   <h2>GitHub</h2>
   <label>
-    Personal access token <span class="muted">(optional)</span>
+    <span>Personal access token <span class="muted">(optional)</span></span>
     <input type="password" autocomplete="off" spellcheck="false" [value]="store.settings().githubToken"
            (change)="store.update({ githubToken: $any($event.target).value.trim() })" placeholder="github_pat_…" />
   </label>
